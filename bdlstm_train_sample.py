@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Example of a single-layer bidirectional long short-term memory network trained with
 connectionist temporal classification to predict character sequences from nFeatures x nFrames
@@ -6,11 +7,11 @@ arrays of Mel-Frequency Cepstral Coefficients.  This is test code to run on the
 
 Author: Jon Rein
 '''
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import re
 import tensorflow as tf
 from tensorflow.python.ops import ctc_ops as ctc
 from tensorflow.python.ops import rnn_cell
@@ -36,6 +37,8 @@ nClasses = 28#27 characters, plus the "blank" for CTC
 print('Loading data')
 batchedData, maxTimeSteps, totalN = load_batched_data(INPUT_PATH, TARGET_PATH, batchSize)
 
+saver = None
+
 ####Define graph
 print('Defining graph')
 graph = tf.Graph()
@@ -60,9 +63,6 @@ with graph.as_default():
     weightsOutH1 = tf.Variable(tf.truncated_normal([2, nHidden],
                                                    stddev=np.sqrt(2.0 / (2*nHidden))))
     biasesOutH1 = tf.Variable(tf.zeros([nHidden]))
-    weightsOutH2 = tf.Variable(tf.truncated_normal([2, nHidden],
-                                                   stddev=np.sqrt(2.0 / (2*nHidden))))
-    biasesOutH2 = tf.Variable(tf.zeros([nHidden]))
     weightsClasses = tf.Variable(tf.truncated_normal([nHidden, nClasses],
                                                      stddev=np.sqrt(2.0 / nHidden)))
     biasesClasses = tf.Variable(tf.zeros([nClasses]))
@@ -88,24 +88,40 @@ with graph.as_default():
     errorRate = tf.reduce_sum(tf.edit_distance(predictions, targetY, normalize=False)) / \
                 tf.to_float(tf.size(targetY.values))
 
-####Run session
-with tf.Session(graph=graph) as session:
-    print('Initializing')
-    tf.initialize_all_variables().run()
-    for epoch in range(nEpochs):
-        print('Epoch', epoch+1, '...')
-        batchErrors = np.zeros(len(batchedData))
-        batchRandIxs = np.random.permutation(len(batchedData)) #randomize batch order
-        for batch, batchOrigI in enumerate(batchRandIxs):
-            batchInputs, batchTargetSparse, batchSeqLengths = batchedData[batchOrigI]
-            batchTargetIxs, batchTargetVals, batchTargetShape = batchTargetSparse
-            feedDict = {inputX: batchInputs, targetIxs: batchTargetIxs, targetVals: batchTargetVals,
-                        targetShape: batchTargetShape, seqLengths: batchSeqLengths}
-            _, l, er, lmt = session.run([optimizer, loss, errorRate, logitsMaxTest], feed_dict=feedDict)
-            print(np.unique(lmt)) #print unique argmax values of first sample in batch; should be blank for a while, then spit out target values
-            if (batch % 1) == 0:
-                print('Minibatch', batch, '/', batchOrigI, 'loss:', l)
-                print('Minibatch', batch, '/', batchOrigI, 'error rate:', er)
-            batchErrors[batch] = er*len(batchSeqLengths)
-        epochErrorRate = batchErrors.sum() / totalN
-        print('Epoch', epoch+1, 'error rate:', epochErrorRate)
+    saver = tf.train.Saver()  # defaults to saving all variables
+    ckpt = tf.train.get_checkpoint_state('./checkpoints')
+
+    with tf.Session(graph=graph) as session:
+        start = 0
+        if ckpt and ckpt.model_checkpoint_path:
+            p = re.compile('\./checkpoints/model\.ckpt-([0-9]+)')
+            m = p.match(ckpt.model_checkpoint_path)
+            start = int(m.group(1)) - 1
+        if start > 0:
+            # Restore variables from disk.
+            saver.restore(session, "./checkpoints/model.ckpt-%d" % start)
+            print("Model %d restored." % start)
+        else:
+            print('Initializing')
+            session.run(tf.initialize_all_variables())
+        for epoch in range(start, nEpochs):
+            print('Epoch', epoch+1, '...')
+            batchErrors = np.zeros(len(batchedData))
+            batchRandIxs = np.random.permutation(len(batchedData)) #randomize batch order
+            for batch, batchOrigI in enumerate(batchRandIxs):
+                batchInputs, batchTargetSparse, batchSeqLengths = batchedData[batchOrigI]
+                batchTargetIxs, batchTargetVals, batchTargetShape = batchTargetSparse
+                feedDict = {inputX: batchInputs, targetIxs: batchTargetIxs, targetVals: batchTargetVals,
+                            targetShape: batchTargetShape, seqLengths: batchSeqLengths}
+                _, l, er, lmt = session.run([optimizer, loss, errorRate, logitsMaxTest], feed_dict=feedDict)
+                print(np.unique(lmt)) #print unique argmax values of first sample in batch; should be blank for a while, then spit out target values
+                if (batch % 1) == 0:
+                    print('Minibatch', batch, '/', batchOrigI, 'loss:', l)
+                    print('Minibatch', batch, '/', batchOrigI, 'error rate:', er)
+                batchErrors[batch] = er*len(batchSeqLengths)
+            epochErrorRate = batchErrors.sum() / totalN
+            saver.save(session, 'checkpoints/model.ckpt', global_step=epoch+1)
+            print('Epoch', epoch+1, 'error rate:', epochErrorRate)
+        print('Learning finished')
+
+        # Do some work with the model

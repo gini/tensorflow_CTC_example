@@ -1,0 +1,5 @@
+*.pyc
+*.swp
+
+checkpoint
+model.ckpt*
