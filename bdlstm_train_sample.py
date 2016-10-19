@@ -36,6 +36,47 @@ nClasses = 28#27 characters, plus the "blank" for CTC
 ####Load data
 print('Loading data')
 batchedData, maxTimeSteps, totalN = load_batched_data(INPUT_PATH, TARGET_PATH, batchSize)
+print('-> loaded a total of %d samples.' % totalN)
+
+def sparseX2matrix(indices, values, shape, default_value=0):
+    r, c = shape
+    idx = 0
+    result = []
+    for y in range(r):
+        arr = []
+        for x in range(c):
+            if idx >= len(indices):
+                arr.append(default_value)
+            else:
+                if indices[idx][0] == y and indices[idx][1] == x:
+                    arr.append(values[idx])
+                    idx = idx + 1
+                else:
+                    arr.append(default_value)
+        result.append(arr)
+    return result
+
+def sparse2matrix(sparse_tensor, default_value=0):
+    return sparseX2matrix(sparse_tensor[0], sparse_tensor[1], sparse_tensor[2], default_value)
+
+def printTarget(chars):
+    for c in chars:
+        if c == 0:
+            print(' ', end='')
+        else:
+            print(chr(64 + c), end='')
+    print()
+
+i = 0
+for batchInputs, batchTargetSparse, batchSeqLengths in batchedData:
+    batchTarget = sparse2matrix(batchTargetSparse)
+    for batch in range(batchSize):
+        print('Sample %d:' % i)
+
+        seqLength = batchSeqLengths[batch]
+        print('input sequence of length %d -> ' % seqLength, end='')
+    	printTarget(batchTarget[batch])
+        i = i + 1
 
 saver = None
 
@@ -125,3 +166,7 @@ with graph.as_default():
         print('Learning finished')
 
         # Do some work with the model
+        feedDict = {inputX: batchedData[0][0], seqLengths: [batchedData[0][2][0], 0, 0, 0]} 
+        p = session.run(predictions, feed_dict=feedDict)
+        batch = sparse2matrix(p)
+        printTarget(batch[0])
