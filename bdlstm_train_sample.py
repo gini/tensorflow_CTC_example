@@ -40,7 +40,7 @@ batchedData, maxTimeSteps, totalN = load_batched_data(INPUT_PATH, TARGET_PATH, b
 saver = None
 
 ####Define graph
-print('Defining graph')
+print('Defining graph (takes quite some time)')
 graph = tf.Graph()
 with graph.as_default():
 
@@ -96,7 +96,7 @@ with graph.as_default():
         if ckpt and ckpt.model_checkpoint_path:
             p = re.compile('\./checkpoints/model\.ckpt-([0-9]+)')
             m = p.match(ckpt.model_checkpoint_path)
-            start = int(m.group(1)) - 1
+            start = int(m.group(1))
         if start > 0:
             # Restore variables from disk.
             saver.restore(session, "./checkpoints/model.ckpt-%d" % start)
