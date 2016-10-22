@@ -75,8 +75,15 @@ for batchInputs, batchTargetSparse, batchSeqLengths in batchedData:
 
         seqLength = batchSeqLengths[batch]
         print('input sequence of length %d -> ' % seqLength, end='')
-    	printTarget(batchTarget[batch])
+        printTarget(batchTarget[batch])
         i = i + 1
+#print("totalN = ", totalN)
+#print("maxTimeSteps = ", maxTimeSteps)
+#print(len(batchedData)) # batches
+#print(len(batchedData[0])) # input x target x seqlength
+#print(batchedData[0][0].shape) # maxTimeSteps x batch samples x features
+#print(batchedData[1][1]) # sparse target matrix -> indices x values x dimensions (batches x max output seqlength)
+#print(batchedData[0][2])
 
 saver = None
 
