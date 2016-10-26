@@ -72,9 +72,10 @@ def data_lists_to_batches(inputList, targetList, batchSize):
 
 def load_batched_data(specPath, targetPath, batchSize):
     import os
-    '''returns 3-element tuple: batched data (list), max # of time steps (int), and
-       total number of samples (int)'''
+    '''returns 4-element tuple: batched data (list), max # of time steps (int),
+       total number of samples (int) and number of classes incl. noc (int)'''
+    nClasses = 28 # 27 chars plus 1 noc
     return data_lists_to_batches([np.load(os.path.join(specPath, fn)) for fn in os.listdir(specPath)],
                                  [np.load(os.path.join(targetPath, fn)) for fn in os.listdir(targetPath)],
                                  batchSize) + \
-            (len(os.listdir(specPath)),)
+            (len(os.listdir(specPath)),nClasses)

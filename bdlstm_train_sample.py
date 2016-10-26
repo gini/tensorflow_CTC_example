@@ -29,13 +29,12 @@ nEpochs = 300
 batchSize = 4
 
 ####Network Parameters
-nFeatures = 26 #12 MFCC coefficients + energy, and derivatives
 nHidden = 128
-nClasses = 28#27 characters, plus the "blank" for CTC
 
 ####Load data
 print('Loading data')
-batchedData, maxTimeSteps, totalN = load_batched_data(INPUT_PATH, TARGET_PATH, batchSize)
+batchedData, maxTimeSteps, totalN, nClasses = load_batched_data(INPUT_PATH, TARGET_PATH, batchSize)
+nFeatures = batchedData[0][0].shape[2] #26 #12 MFCC coefficients + energy, and derivatives
 print('-> loaded a total of %d samples.' % totalN)
 
 def sparseX2matrix(indices, values, shape, default_value=0):
