@@ -2,6 +2,43 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 
+import os
+INPUT_PATH = './sample_data/mfcc' #directory of MFCC nFeatures x nFrames 2-D array .npy files
+TARGET_PATH = './sample_data/char_y/' #directory of nCharacters 1-D array .npy files
+
+def createExampleIt(specPath = INPUT_PATH, targetPath = TARGET_PATH):
+    """
+    Iterator over the example data
+
+    :type specPath: path to directory containing sample .npy files
+    :type targetPath: path to directory containing target .npy files
+    """
+    sample_files = os.listdir(specPath)
+    target_files = os.listdir(targetPath)
+    assert len(sample_files) == len(target_files)
+    for i in range(len(sample_files)):
+        yield (np.load(os.path.join(specPath, sample_files[i])), np.load(os.path.join(targetPath, target_files[i])))
+
+
+def loadClasses2targetLabel(sample_target_itr):
+    """
+    Extract a mapping from class indices to target labels
+    
+    :type sample_target_itr: iterator over samples and groundtruth
+    """
+    labels = set()
+    for _, groundtruth in sample_target_itr:
+        for t in groundtruth:
+             labels.add(t)
+    result = dict()
+    i = 0
+    for l in labels:
+         result[i] = l
+         i += 1
+    return result
+
+#print loadClasses2targetLabel(createExampleIt())
+
 def load_batched_data(sample_target_itr, batch_size):
     """
     Load data ...
@@ -47,5 +84,5 @@ def load_batched_data(sample_target_itr, batch_size):
             targets_in_batch = list()
 
     # putting it all together
-    ...
+    #...
     # return np.array()
