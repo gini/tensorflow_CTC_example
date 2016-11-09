@@ -20,24 +20,39 @@ def createExampleIt(specPath = INPUT_PATH, targetPath = TARGET_PATH):
         yield (np.load(os.path.join(specPath, sample_files[i])), np.load(os.path.join(targetPath, target_files[i])))
 
 
-def loadClasses2targetLabel(sample_target_itr):
+def get_parameters(sample_target_itr):
     """
-    Extract a mapping from class indices to target labels
+    Extract a mapping from class indices to target labels, the max time steps and the max target seq length
     
     :type sample_target_itr: iterator over samples and groundtruth
     """
+    
     labels = set()
-    for _, groundtruth in sample_target_itr:
+    max_time_steps = 0
+    max_target_seq_len = 0
+    
+    for sample, groundtruth in sample_target_itr:
+        
+        current_time_steps = len(sample)
+        if current_time_steps > max_time_steps:
+            max_time_steps = current_time_steps
+            
+        current_target_seq_len = len(groundtruth)
+        if current_target_seq_len > max_target_seq_len:
+            max_target_seq_len = current_target_seq_len
+        
         for t in groundtruth:
              labels.add(t)
-    result = dict()
+             
+    class_mapping = dict()
     i = 0
     for l in labels:
-         result[i] = l
+         class_mapping[i] = l
          i += 1
-    return result
+         
+    return class_mapping, max_time_steps, max_target_seq_len
 
-#print loadClasses2targetLabel(createExampleIt())
+print(get_parameters(createExampleIt()))
 
 def load_batched_data(sample_target_itr, batch_size):
     """
