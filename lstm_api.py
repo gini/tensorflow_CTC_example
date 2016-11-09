@@ -33,7 +33,7 @@ def get_parameters(sample_target_itr):
     
     for sample, groundtruth in sample_target_itr:
         
-        current_time_steps = len(sample)
+        current_time_steps = len(sample[0])
         if current_time_steps > max_time_steps:
             max_time_steps = current_time_steps
             
