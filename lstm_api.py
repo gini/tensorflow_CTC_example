@@ -39,7 +39,6 @@ def get_parameters(sample_target_itr):
     return class_mapping, max_time_steps, max_target_seq_len
 
 
-
 def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes):
     """
     Transform the data from input iterator to learnable format.
@@ -101,5 +100,4 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
     batches = list(zip(cubes, targets, seq_lens))
 
     return batches, n_max_time_steps, i, n_classes
-
 

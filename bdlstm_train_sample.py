@@ -128,7 +128,7 @@ with graph.as_default():
     logits3d = tf.pack(logits)
     loss = tf.reduce_mean(ctc.ctc_loss(logits3d, targetY, seqLengths))
     optimizer = tf.train.MomentumOptimizer(learningRate, momentum).minimize(loss)
-
+    
     ####Evaluating
     logitsMaxTest = tf.slice(tf.argmax(logits3d, 2), [0, 0], [seqLengths[0], 1])
     predictions = tf.to_int32(ctc.ctc_beam_search_decoder(logits3d, seqLengths)[0][0])
@@ -139,6 +139,9 @@ with graph.as_default():
     ckpt = tf.train.get_checkpoint_state('./checkpoints')
 
     with tf.Session(graph=graph) as session:
+        merged = tf.merge_all_summaries()
+        writer = tf.train.SummaryWriter("/tmp/basic_new", session.graph)
+        
         start = 0
         if ckpt and ckpt.model_checkpoint_path:
             p = re.compile('\./checkpoints/model\.ckpt-([0-9]+)')
