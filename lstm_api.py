@@ -4,22 +4,6 @@ import os
 
 import numpy as np
 
-INPUT_PATH = './sample_data/mfcc'  # directory of MFCC nFeatures x nFrames 2-D array .npy files
-TARGET_PATH = './sample_data/char_y/'  # directory of nCharacters 1-D array .npy files
-
-
-def createExampleIt(specPath=INPUT_PATH, targetPath=TARGET_PATH):
-    """
-    Iterator over the example data
-
-    :type specPath: path to directory containing sample .npy files
-    :type targetPath: path to directory containing target .npy files
-    """
-    sample_files = os.listdir(specPath)
-    target_files = os.listdir(targetPath)
-    assert len(sample_files) == len(target_files)
-    for i in range(len(sample_files)):
-        yield (np.load(os.path.join(specPath, sample_files[i])), np.load(os.path.join(targetPath, target_files[i])))
 
 
 def get_parameters(sample_target_itr):
@@ -55,21 +39,22 @@ def get_parameters(sample_target_itr):
     return class_mapping, max_time_steps, max_target_seq_len
 
 
-itr = createExampleIt()
-class_mapping, max_time_steps, max_target_seq_len = get_parameters(itr)
-print(u"Num Classes: {0:d}\tNum max time steps: {1:d}\tNum max target seq len: {2:d}\t".format(len(class_mapping),
-                                                                                               max_time_steps,
-                                                                                               max_target_seq_len))
-
 
 def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes):
     """
-    Load data ...
+    Transform the data from input iterator to learnable format.
 
     :type sample_target_itr: iterator
     :type batch_size: int
     :type n_max_time_steps: int
     :type n_classes: int
+    :return  batches, n_max_time_steps, i, n_classes
+             batches: list((cube, target, seq_len)) with length of sample / batch size
+             cube: a batch of input data as batch_size times a list of n_max_time_steps feature values
+                   of the first feature, a list of n_max_time_steps feature values of the second feature, ...
+             target: a batch of output data in form of a list of class indices
+             seq_len: a list of input sequence lengths
+    :rtype (list((np.ndarray(np.ndarray(np.ndarray(float32))), list(np.ndarray(uint8)), list(int))), int, int, int)
     """
     # for all batches
     n_features = None
@@ -90,7 +75,7 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
             assert n_features == len(sample)
 
         sample_len = len(sample[0])
-        padded_sample = np.pad(np.array(sample), ((0, n_max_time_steps - sample_len), (0, 0)), 'constant',
+        padded_sample = np.pad(np.array(sample), ((0, 0), (0, n_max_time_steps - sample_len)), 'constant',
                                constant_values=0)
         cube.append(padded_sample)
         seq_len.append(sample_len)
@@ -118,9 +103,3 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
     return batches, n_max_time_steps, i, n_classes
 
 
-itr2 = createExampleIt()
-batches, n_max_time_steps, i, n_classes = load_batched_data(itr2, 5, max_time_steps, len(class_mapping))
-print("batches {}".format(batches))
-print("max time steps {}".format(n_max_time_steps))
-print("total samples  {}".format(i))
-print("n classes  {}".format(n_classes))
