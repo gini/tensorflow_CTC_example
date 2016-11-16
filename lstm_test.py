@@ -17,7 +17,7 @@ def recursive_type(o):
         first = o[0]
         return "np.ndarray(" +recursive_type(first) + ")"
     elif isinstance(o, tuple):
-        return "("  + ", ".join([recursive_type(item) for item in o]) + ")"
+        return "(" + ", ".join([recursive_type(item) for item in o]) + ")"
     else:
         return type(o).__name__
 
