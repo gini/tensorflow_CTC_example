@@ -55,13 +55,6 @@ def get_parameters(sample_target_itr):
     return class_mapping, max_time_steps, max_target_seq_len
 
 
-itr = createExampleIt()
-class_mapping, max_time_steps, max_target_seq_len = get_parameters(itr)
-print(u"Num Classes: {0:d}\tNum max time steps: {1:d}\tNum max target seq len: {2:d}\t".format(len(class_mapping),
-                                                                                               max_time_steps,
-                                                                                               max_target_seq_len))
-
-
 def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes):
     """
     Load data ...
@@ -90,7 +83,7 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
             assert n_features == len(sample)
 
         sample_len = len(sample[0])
-        padded_sample = np.pad(np.array(sample), ((0, n_max_time_steps - sample_len), (0, 0)), 'constant',
+        padded_sample = np.pad(np.array(sample), ((0, 0), (0, n_max_time_steps - sample_len)), 'constant',
                                constant_values=0)
         cube.append(padded_sample)
         seq_len.append(sample_len)
@@ -117,10 +110,15 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
 
     return batches, n_max_time_steps, i, n_classes
 
-
-itr2 = createExampleIt()
-batches, n_max_time_steps, i, n_classes = load_batched_data(itr2, 5, max_time_steps, len(class_mapping))
-print("batches {}".format(batches))
-print("max time steps {}".format(n_max_time_steps))
-print("total samples  {}".format(i))
-print("n classes  {}".format(n_classes))
+if __name__ == '__main__':
+    itr = createExampleIt()
+    class_mapping, max_time_steps, max_target_seq_len = get_parameters(itr)
+    print(u"Num Classes: {0:d}\tNum max time steps: {1:d}\tNum max target seq len: {2:d}\t".format(len(class_mapping),
+                                                                                                   max_time_steps,
+                                                                                                   max_target_seq_len))
+    itr2 = createExampleIt()
+    batches, n_max_time_steps, i, n_classes = load_batched_data(itr2, 5, max_time_steps, len(class_mapping))
+    print("batches {}".format(batches[0][0][0]))
+    print("max time steps {}".format(n_max_time_steps))
+    print("total samples  {}".format(i))
+    print("n classes  {}".format(n_classes))
