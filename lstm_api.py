@@ -1,16 +1,67 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+'''
+LSTM API reads an iterator of data and prepares the data for the training.
+
+
+
+@Gini GmbH
+'''
+
 import os
 
 import numpy as np
 
 
+class FeatureValues(np.ndarray):
+    """
+
+
+    """
+    def __new__(cls, *feature_value):
+        return np.array(feature_value, dtype = float)
+
+class Sample(np.ndarray):
+    """
+
+    """
+    def __new__(cls, *feature_values):
+        assert isinstance(feature_values, np.ndarray)
+        assert feature_values.dtype == np.dtype('float32')
+        return np.array(feature_values, dtype=np.ndarray)
+
+class Groundtruth(np.ndarray):
+    """
+
+    """
+    def __new__(cls, *targets):
+        assert isinstance(targets, np.ndarray)
+        assert targets.dtype == np.dtype('uint8')
+        return np.array(targets, dtype = int)
+
+class TrainingDatum(tuple):
+    """
+    An instance of training datum.
+    It consists of a single sample sequence and corresponding groundtruth sequence.
+    """
+
+    def __new__(cls, sample, groundtruth):
+        """
+
+        :param sample:  a list of length seq_length containing n_feature feature values
+        :type  sample:  np.ndarray(np.ndarray(float32))
+        :param groundtruth:  class labels for the sample data
+        :type  groundtruth:  np.ndarray(uint8)
+        """
+        return tuple.__new__(cls, (sample, groundtruth))
 
 def get_parameters(sample_target_itr):
     """
     Extract a mapping from class indices to target labels, the max time steps and the max target seq length
     
-    :type sample_target_itr: iterator over samples and groundtruth
+    :type sample_target_itr: iterable over TrainingDatum
+
     """
 
     labels = set()

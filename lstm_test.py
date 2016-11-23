@@ -33,6 +33,9 @@ class LSTMAPITest(unittest.TestCase):
 
     def test_get_params(self):
         itr = sample_data.createExampleIt(self.INPUT_PATH, self.TARGET_PATH)
+
+        #print(recursive_type(next(itr)))
+
         class_mapping, max_time_steps, max_target_seq_len = api.get_parameters(itr)
 
         self.assertEqual(len(class_mapping), 24, "The number of classes in the example should be 24 characters")
