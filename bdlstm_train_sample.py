@@ -17,7 +17,11 @@ from tensorflow.python.ops import ctc_ops as ctc
 from tensorflow.python.ops import rnn_cell
 from tensorflow.python.ops.rnn import bidirectional_rnn
 import numpy as np
-from utils import load_batched_data
+import sys
+sys.path.append('./sample_data')
+from sample_data import createExampleIt
+from lstm_api import get_parameters
+from lstm_api import load_batched_data
 
 INPUT_PATH = './sample_data/mfcc' #directory of MFCC nFeatures x nFrames 2-D array .npy files
 TARGET_PATH = './sample_data/char_y/' #directory of nCharacters 1-D array .npy files
@@ -33,30 +37,21 @@ nHidden = 128
 
 ####Load data
 print('Loading data')
-batchedData, maxTimeSteps, totalN, nClasses = load_batched_data(INPUT_PATH, TARGET_PATH, batchSize)
-nFeatures = batchedData[0][0].shape[2] #26 #12 MFCC coefficients + energy, and derivatives
+sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
+class_mapping, max_time_steps, max_target_seq_len = get_parameters(sample_target_itr)
+nClasses = len(class_mapping)
+sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
+batchedData, maxTimeSteps, totalN, n_classes = load_batched_data(sample_target_itr, batchSize, max_time_steps, nClasses)
+
+print("batchedData {}".format(batchedData))
+print("max time steps {}".format(maxTimeSteps))
+print("total samples  {}".format(totalN))
+print("n classes  {}".format(n_classes))
+    
+print(batchedData[0][0][0].shape[0])
+nFeatures = batchedData[0][0][0].shape[0] #26 #12 MFCC coefficients + energy, and derivatives
 print('-> loaded a total of %d samples.' % totalN)
 
-def sparseX2matrix(indices, values, shape, default_value=0):
-    r, c = shape
-    idx = 0
-    result = []
-    for y in range(r):
-        arr = []
-        for x in range(c):
-            if idx >= len(indices):
-                arr.append(default_value)
-            else:
-                if indices[idx][0] == y and indices[idx][1] == x:
-                    arr.append(values[idx])
-                    idx = idx + 1
-                else:
-                    arr.append(default_value)
-        result.append(arr)
-    return result
-
-def sparse2matrix(sparse_tensor, default_value=0):
-    return sparseX2matrix(sparse_tensor[0], sparse_tensor[1], sparse_tensor[2], default_value)
 
 def printTarget(chars):
     for c in chars:
@@ -67,8 +62,7 @@ def printTarget(chars):
     print()
 
 i = 0
-for batchInputs, batchTargetSparse, batchSeqLengths in batchedData:
-    batchTarget = sparse2matrix(batchTargetSparse)
+for batchInputs, batchTarget, batchSeqLengths in batchedData:
     for batch in range(batchSize):
         print('Sample %d:' % i)
 
@@ -76,13 +70,14 @@ for batchInputs, batchTargetSparse, batchSeqLengths in batchedData:
         print('input sequence of length %d -> ' % seqLength, end='')
         printTarget(batchTarget[batch])
         i = i + 1
-#print("totalN = ", totalN)
-#print("maxTimeSteps = ", maxTimeSteps)
-#print(len(batchedData)) # batches
-#print(len(batchedData[0])) # input x target x seqlength
-#print(batchedData[0][0].shape) # maxTimeSteps x batch samples x features
-#print(batchedData[1][1]) # sparse target matrix -> indices x values x dimensions (batches x max output seqlength)
-#print(batchedData[0][2])
+
+print("totalN = ", totalN)
+print("maxTimeSteps = ", maxTimeSteps)
+print("len(batchedData)) = ", len(batchedData)) # number of batches
+print("len(batchedData[0]) = ", len(batchedData[0]))  # number of dimensions of first batch
+print("batchedData[0][0].shape = ", batchedData[0][0].shape) # batchSize x features x maxTimeSteps
+print("batchedData[1][1] = ", batchedData[1][1]) # target matrix with entries batchSize x targetValue)
+print("batchedData[0][2] = ", batchedData[0][2]) # array of sequence lengths
 
 saver = None
 
@@ -110,9 +105,9 @@ with graph.as_default():
     weightsOutH1 = tf.Variable(tf.truncated_normal([2, nHidden],
                                                    stddev=np.sqrt(2.0 / (2*nHidden))))
     biasesOutH1 = tf.Variable(tf.zeros([nHidden]))
-    weightsClasses = tf.Variable(tf.truncated_normal([nHidden, nClasses],
+    weightsClasses = tf.Variable(tf.truncated_normal([nHidden, n_classes],
                                                      stddev=np.sqrt(2.0 / nHidden)))
-    biasesClasses = tf.Variable(tf.zeros([nClasses]))
+    biasesClasses = tf.Variable(tf.zeros([n_classes]))
 
     ####Network
     forwardH1 = rnn_cell.LSTMCell(nHidden, use_peepholes=True, state_is_tuple=True)
