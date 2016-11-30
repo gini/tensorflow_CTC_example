@@ -39,9 +39,9 @@ nHidden = 128
 print('Loading data')
 sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
 class_mapping, max_time_steps, max_target_seq_len = get_parameters(sample_target_itr)
-nClasses = max(class_mapping.values()) + 2 # +1 since zero-based, +1 for NAC
+nClasses = len(class_mapping) + 1 # +1 for NAC
 sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
-batchedData, maxTimeSteps, totalN, n_classes = load_batched_data(sample_target_itr, batchSize, max_time_steps, nClasses)
+batchedData, maxTimeSteps, totalN, n_classes = load_batched_data(sample_target_itr, batchSize, max_time_steps, nClasses, class_mapping)
 
 print("batchedData {}".format(batchedData))
 print("max time steps {}".format(maxTimeSteps))
@@ -74,12 +74,12 @@ def sparseX2matrix(indices, values, shape, default_value=0):
 def sparse2matrix(sparse_tensor, default_value=0):
     return sparseX2matrix(sparse_tensor[0], sparse_tensor[1], sparse_tensor[2], default_value)
 
-def printTarget(chars):
-    for c in chars:
-        if c == 0:
+def printTarget(indices, class_mapping):
+    for i in indices:
+        if class_mapping[i] == 0:
             print(' ', end='')
         else:
-            print(chr(64 + c), end='')
+            print(chr(64 + class_mapping[i]), end='')
     print()
 
 i = 0
@@ -90,7 +90,7 @@ for batchInputs, batchTargetSparse, batchSeqLengths in batchedData:
 
         seqLength = batchSeqLengths[batch]
         print('input sequence of length %d -> ' % seqLength, end='')
-        printTarget(batchTarget[batch])
+        printTarget(batchTarget[batch], class_mapping)
         i = i + 1
 
 print("totalN = ", totalN)
@@ -113,6 +113,7 @@ with graph.as_default():
     ####Graph input
     inputX = tf.placeholder(tf.float32, shape=(batchSize, nFeatures, maxTimeSteps))
     #Prep input data to fit requirements of rnn.bidirectional_rnn
+    #  Permutate dimensions to get shape=(maxTimeSteps, batchSize, nFeatures)
     inputXt = tf.transpose(inputX, perm=[2, 0, 1])
     #  Reshape to 2-D tensor (nTimeSteps*batchSize, nfeatures)
     inputXrs = tf.reshape(inputXt, [-1, nFeatures])
@@ -196,4 +197,4 @@ with graph.as_default():
         feedDict = {inputX: batchedData[0][0], seqLengths: [batchedData[0][2][0], 0, 0, 0]} 
         p = session.run(predictions, feed_dict=feedDict)
         batch = sparse2matrix(p)
-        printTarget(batch[0])
+        printTarget(batch[0], class_mapping)

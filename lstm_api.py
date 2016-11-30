@@ -56,7 +56,7 @@ class TrainingDatum(tuple):
         """
         return tuple.__new__(cls, (sample, groundtruth))
 
-def target_list_to_sparse_tensor(targetList):
+def target_list_to_sparse_tensor(targetList, class_mapping):
     '''make tensorflow SparseTensor from list of targets, with each element
        in the list being a list or array with the values of the target sequence
        (e.g., the integer values of a character map for an ASR target string)
@@ -67,7 +67,7 @@ def target_list_to_sparse_tensor(targetList):
     for tI, target in enumerate(targetList):
         for seqI, val in enumerate(target):
             indices.append([tI, seqI])
-            vals.append(val)
+            vals.append(class_mapping.keys()[class_mapping.values().index(val)])
     shape = [len(targetList), np.asarray(indices).max(0)[1]+1]
     print("shape = {}".format(shape))
     return (np.array(indices), np.array(vals), np.array(shape))
@@ -106,7 +106,7 @@ def get_parameters(sample_target_itr):
     return class_mapping, max_time_steps, max_target_seq_len
 
 
-def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes):
+def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes, class_mapping):
     """
     Transform the data from input iterator to learnable format.
 
@@ -114,6 +114,7 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
     :type batch_size: int
     :type n_max_time_steps: int
     :type n_classes: int
+    :type class_mapping: mapping from class indices to target labels
     :return  batches, n_max_time_steps, i, n_classes
              batches: list((cube, target, seq_len)) with length of sample / batch size
              cube: a batch of input data as batch_size times a list of n_max_time_steps feature values
@@ -150,7 +151,7 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
         if i % batch_size == batch_size - 1:
             cubes.append(np.array(cube))
             seq_lens.append(seq_len)
-            targets.append(target_list_to_sparse_tensor(targets_in_batch))
+            targets.append(target_list_to_sparse_tensor(targets_in_batch, class_mapping))
             cube = list()
             seq_len = list()
             targets_in_batch = list()
@@ -160,7 +161,7 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
     if cube:
         cubes.append(np.array(cube))
         seq_lens.append(seq_len)
-        targets.append(target_list_to_sparse_tensor(targets_in_batch))
+        targets.append(target_list_to_sparse_tensor(targets_in_batch, class_mapping))
 
     # putting it all together
 
