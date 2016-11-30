@@ -39,7 +39,7 @@ nHidden = 128
 print('Loading data')
 sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
 class_mapping, max_time_steps, max_target_seq_len = get_parameters(sample_target_itr)
-nClasses = len(class_mapping)
+nClasses = max(class_mapping.values()) + 2 # +1 since zero-based, +1 for NAC
 sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
 batchedData, maxTimeSteps, totalN, n_classes = load_batched_data(sample_target_itr, batchSize, max_time_steps, nClasses)
 
@@ -53,6 +53,27 @@ nFeatures = batchedData[0][0][0].shape[0] #26 #12 MFCC coefficients + energy, an
 print('-> loaded a total of %d samples.' % totalN)
 
 
+def sparseX2matrix(indices, values, shape, default_value=0):
+    r, c = shape
+    idx = 0
+    result = []
+    for y in range(r):
+        arr = []
+        for x in range(c):
+            if idx >= len(indices):
+                arr.append(default_value)
+            else:
+                if indices[idx][0] == y and indices[idx][1] == x:
+                    arr.append(values[idx])
+                    idx = idx + 1
+                else:
+                    arr.append(default_value)
+        result.append(arr)
+    return result
+
+def sparse2matrix(sparse_tensor, default_value=0):
+    return sparseX2matrix(sparse_tensor[0], sparse_tensor[1], sparse_tensor[2], default_value)
+
 def printTarget(chars):
     for c in chars:
         if c == 0:
@@ -62,7 +83,8 @@ def printTarget(chars):
     print()
 
 i = 0
-for batchInputs, batchTarget, batchSeqLengths in batchedData:
+for batchInputs, batchTargetSparse, batchSeqLengths in batchedData:
+    batchTarget = sparse2matrix(batchTargetSparse)
     for batch in range(batchSize):
         print('Sample %d:' % i)
 
@@ -89,11 +111,12 @@ with graph.as_default():
     ####NOTE: try variable-steps inputs and dynamic bidirectional rnn, when it's implemented in tensorflow
         
     ####Graph input
-    inputX = tf.placeholder(tf.float32, shape=(maxTimeSteps, batchSize, nFeatures))
+    inputX = tf.placeholder(tf.float32, shape=(batchSize, nFeatures, maxTimeSteps))
     #Prep input data to fit requirements of rnn.bidirectional_rnn
+    inputXt = tf.transpose(inputX, perm=[2, 0, 1])
     #  Reshape to 2-D tensor (nTimeSteps*batchSize, nfeatures)
-    inputXrs = tf.reshape(inputX, [-1, nFeatures])
-    #  Split to get a list of 'n_steps' tensors of shape (batch_size, n_hidden)
+    inputXrs = tf.reshape(inputXt, [-1, nFeatures])
+    #  Split to get a list of 'n_steps' tensors of shape (batch_size, nFeatures)
     inputList = tf.split(0, maxTimeSteps, inputXrs)
     targetIxs = tf.placeholder(tf.int64)
     targetVals = tf.placeholder(tf.int32)

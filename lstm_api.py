@@ -56,6 +56,22 @@ class TrainingDatum(tuple):
         """
         return tuple.__new__(cls, (sample, groundtruth))
 
+def target_list_to_sparse_tensor(targetList):
+    '''make tensorflow SparseTensor from list of targets, with each element
+       in the list being a list or array with the values of the target sequence
+       (e.g., the integer values of a character map for an ASR target string)
+       See https://github.com/tensorflow/tensorflow/blob/master/tensorflow/contrib/ctc/ctc_loss_op_test.py
+       for example of SparseTensor format'''
+    indices = []
+    vals = []
+    for tI, target in enumerate(targetList):
+        for seqI, val in enumerate(target):
+            indices.append([tI, seqI])
+            vals.append(val)
+    shape = [len(targetList), np.asarray(indices).max(0)[1]+1]
+    print("shape = {}".format(shape))
+    return (np.array(indices), np.array(vals), np.array(shape))
+
 def get_parameters(sample_target_itr):
     """
     Extract a mapping from class indices to target labels, the max time steps and the max target seq length
@@ -134,7 +150,7 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
         if i % batch_size == batch_size - 1:
             cubes.append(np.array(cube))
             seq_lens.append(seq_len)
-            targets.append(targets_in_batch)
+            targets.append(target_list_to_sparse_tensor(targets_in_batch))
             cube = list()
             seq_len = list()
             targets_in_batch = list()
@@ -144,7 +160,7 @@ def load_batched_data(sample_target_itr, batch_size, n_max_time_steps, n_classes
     if cube:
         cubes.append(np.array(cube))
         seq_lens.append(seq_len)
-        targets.append(targets_in_batch)
+        targets.append(target_list_to_sparse_tensor(targets_in_batch))
 
     # putting it all together
 
