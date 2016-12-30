@@ -37,11 +37,24 @@ nHidden = 128
 
 ####Load data
 print('Loading data')
-sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
-class_mapping, max_time_steps, max_target_seq_len = get_parameters(sample_target_itr)
-nClasses = len(class_mapping) + 1 # +1 for NAC
-sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
-batchedData, maxTimeSteps, totalN, n_classes = load_batched_data(sample_target_itr, batchSize, max_time_steps, nClasses, class_mapping)
+def loadSample():
+    INPUT_PATH = './sample_data/mfcc' #directory of MFCC nFeatures x nFrames 2-D array .npy files
+    TARGET_PATH = './sample_data/char_y/' #directory of nCharacters 1-D array .npy files
+    sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
+    class_mapping, max_time_steps, max_target_seq_len = get_parameters(sample_target_itr)
+    nClasses = len(class_mapping) + 1  # +1 for NAC
+    sample_target_itr = createExampleIt(INPUT_PATH, TARGET_PATH)
+    return load_batched_data(sample_target_itr, batchSize, max_time_steps, nClasses, class_mapping)
+
+def loadSmartDoc():
+    sample_target_itr = createSmartDocIt()
+    class_mapping, max_time_steps, max_target_seq_len = get_parameters(sample_target_itr)
+    nClasses = len(class_mapping) + 1 # +1 for NAC
+    sample_target_itr = createSmartDocIt()
+    return load_batched_data(sample_target_itr, batchSize, max_time_steps, nClasses, class_mapping)
+
+#batchedData, maxTimeSteps, totalN, n_classes = loadSample()
+batchedData, maxTimeSteps, totalN, n_classes = loadSmartDoc()
 
 print("batchedData {}".format(batchedData))
 print("max time steps {}".format(maxTimeSteps))
